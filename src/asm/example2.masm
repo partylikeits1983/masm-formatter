@@ -145,16 +145,13 @@ proc.get_note_inputs_commitment
     movupw.2 movupw.2
     # => [0, 0, 0, 0, 0, 0, 0, 9, R2, R1]
 
+    # Execute the RPO permutation.
+    hperm
+    # => Permuted state [R2, R1, C]
 
-
-
-# Execute the RPO permutation.
-hperm
-# => Permuted state [R2, R1, C]
-
-# Convert the state to the digest.
-exec.native::state_to_digest
-# => [Digest]
+    # Convert the state to the digest.
+    exec.native::state_to_digest
+    # => [Digest]
 end
 
 #! Returns the RECIPIENT for a specified SERIAL_NUM, SCRIPT_HASH, and input
@@ -163,14 +160,14 @@ end
 #! Outputs: [RECIPIENT]
 #!
 proc.build_recipient_hash
-padw hmerge
-# => [SERIAL_NUM_HASH, SCRIPT_HASH, INPUT_HASH]
+    padw hmerge
+    # => [SERIAL_NUM_HASH, SCRIPT_HASH, INPUT_HASH]
 
-swapw hmerge
-# => [MERGE_SCRIPT, INPUT_HASH]
+    swapw hmerge
+    # => [MERGE_SCRIPT, INPUT_HASH]
 
-swapw hmerge
-# [RECIPIENT]
+    swapw hmerge
+    # [RECIPIENT]
 end
 
 # RECLAIM FUNCTIONALITY PROCEDURES
@@ -183,19 +180,19 @@ end
 #!
 #! Only allows a single input currently
 proc.build_p2id_recipient_hash
-padw hmerge
-# => [SERIAL_NUM_HASH, SCRIPT_HASH, account_id]
+    padw hmerge
+    # => [SERIAL_NUM_HASH, SCRIPT_HASH, account_id]
 
-# merge SERIAL_NUM_HASH and SCRIPT_HASH
-swapw hmerge
-# => [SERIAL_SCRIPT_HASH, account_id]
+    # merge SERIAL_NUM_HASH and SCRIPT_HASH
+    swapw hmerge
+    # => [SERIAL_SCRIPT_HASH, account_id]
 
-# compute the INPUT_HASH. Note: only one input is allowed
-swapw swap.3 padw hmerge
-# => [INPUT_HASH, SERIAL_SCRIPT_HASH]
+    # compute the INPUT_HASH. Note: only one input is allowed
+    swapw swap.3 padw hmerge
+    # => [INPUT_HASH, SERIAL_SCRIPT_HASH]
 
-hmerge
-# [RECIPIENT]
+    hmerge
+    # [RECIPIENT]
 end
 
 #! Returns if the currently consuming account is the creator of the note
@@ -204,25 +201,25 @@ end
 #! Outputs: [is_creator]
 #!
 proc.check_if_consumer_is_creator
-# get consuming account id
-exec.account::get_id
+    # get consuming account id
+    exec.account::get_id
 
-# P2ID SCRIPT HASH
-push.10602532918680875325.6675127147439709234.18374149518996115046.17430228962309045350
+    # P2ID SCRIPT HASH
+    push.10602532918680875325.6675127147439709234.18374149518996115046.17430228962309045350
 
-# serial num
-exec.note::get_serial_number
+    # serial num
+    exec.note::get_serial_number
 
-exec.build_p2id_recipient_hash
+    exec.build_p2id_recipient_hash
 
-# write inputs to mem drop num inputs & ptr
-push.0 exec.note::get_inputs drop drop
+    # write inputs to mem drop num inputs & ptr
+    push.0 exec.note::get_inputs drop drop
 
-padw mem_loadw.0
+    padw mem_loadw.0
 
-eqw
+    eqw
 
-swap.8 dropw dropw
+    swap.8 dropw dropw
 
 end
 
@@ -235,7 +232,7 @@ proc.handle_reclaim
 
     push.1 call.account::incr_nonce
 
-     exec.sys::truncate_stack
+    exec.sys::truncate_stack
 end
 
 # Partially Fillable Swap Script (SWAPp)
@@ -391,8 +388,6 @@ proc.execute_SWAPp
     padw mem_loadw.SWAPP_SCRIPT_HASH
     # => [SCRIPT_HASH, INPUTS_HASH]
 
-
-
     push.1.2.3.4
     # => [SERIAL_NUM, SCRIPT_HASH, INPUTS_HASH]
 
@@ -458,8 +453,6 @@ begin
         debug.stack
         drop
         exec.execute_SWAPp
-    end 
-
-
+    end
 
 end
