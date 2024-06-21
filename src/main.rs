@@ -1,7 +1,6 @@
 use clap::Parser;
 use glob::glob;
 use masm_formatter::format_file;
-use std::path::Path;
 
 #[derive(Parser)]
 struct Cli {

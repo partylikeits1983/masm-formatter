@@ -20,7 +20,8 @@ impl ConstructType {
             "begin" => Some(Self::Begin),
             "if" => Some(Self::If),
             "else" => Some(Self::Else),
-            "proc" | "export" => Some(Self::Proc), // Treat export like proc
+            "proc" => Some(Self::Proc),
+            "export" => Some(Self::Export),
             "repeat" => Some(Self::Repeat),
             "while" => Some(Self::While),
             "end" => Some(Self::End),
@@ -33,6 +34,7 @@ pub fn format_code(code: &str) -> String {
     let mut formatted_code = String::new();
     let mut indentation_level = 0;
     let mut construct_stack = Vec::new();
+    let mut last_line_was_empty = false;
 
     for line in code.lines() {
         let trimmed_line = line.trim();
@@ -61,9 +63,10 @@ pub fn format_code(code: &str) -> String {
                         }
                     }
 
-                    formatted_code.push_str(&"  ".repeat(indentation_level));
+                    formatted_code.push_str(&"    ".repeat(indentation_level)); // Use four spaces for indentation
                     formatted_code.push_str(trimmed_line);
                     formatted_code.push('\n');
+                    last_line_was_empty = false;
 
                     match construct {
                         ConstructType::Begin
@@ -78,13 +81,17 @@ pub fn format_code(code: &str) -> String {
                         _ => {}
                     }
                 } else {
-                    formatted_code.push_str(&"  ".repeat(indentation_level));
+                    formatted_code.push_str(&"    ".repeat(indentation_level)); // Use four spaces for indentation
                     formatted_code.push_str(trimmed_line);
                     formatted_code.push('\n');
+                    last_line_was_empty = false;
                 }
             }
         } else {
-            formatted_code.push('\n'); // Replace empty lines with just a newline
+            if !last_line_was_empty {
+                formatted_code.push('\n'); // Only add a single empty line
+                last_line_was_empty = true;
+            }
         }
     }
 
