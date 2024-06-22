@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
+use regex::Regex;
 
 #[derive(Debug, PartialEq, Clone)]
 enum ConstructType {
@@ -11,7 +12,8 @@ enum ConstructType {
     While,
     End,
     Else,
-    Export, // New enum variant for export
+    Export,
+    ExportLine, 
 }
 
 impl ConstructType {
@@ -30,15 +32,16 @@ impl ConstructType {
     }
 }
 
-const INDENT_1: &str = "    ";
-const INDENT_2: &str = "    ";
-const INDENT_3: &str = "    ";
-const INDENT_4: &str = "    ";
-const INDENT_5: &str = "    ";
-const INDENT_6: &str = "    ";
+const INDENT: &str = "    ";
 
 fn is_comment(line: &str) -> bool {
     line.trim_start().starts_with('#')
+}
+
+// to handle single line export statements
+fn is_export_line(line: &str) -> bool {
+    let re = Regex::new(r"^export\.\w+::\w+$").unwrap();
+    re.is_match(line)
 }
 
 pub fn format_code(code: &str) -> String {
@@ -46,6 +49,7 @@ pub fn format_code(code: &str) -> String {
     let mut indentation_level = 0;
     let mut construct_stack = Vec::new();
     let mut last_line_was_empty = false;
+    let mut last_was_export_line = false;
 
     let mut lines = code.lines().peekable();
 
@@ -55,21 +59,36 @@ pub fn format_code(code: &str) -> String {
 
         if !trimmed_line.is_empty() {
             if is_comment(trimmed_line) {
-                if let Some(prev_line) = formatted_code.lines().last() {
-                    let prev_indent_level = prev_line.chars().take_while(|&c| c == ' ').count() / 4;
-                    if prev_line.trim_start().starts_with("export") {
-                        formatted_code.push_str(&INDENT_1.repeat(prev_indent_level + 1));
-                    } else {
-                        formatted_code.push_str(&INDENT_2.repeat(indentation_level));
-                    }
+                if last_was_export_line {
+                    formatted_code.push_str(trimmed_line);
                 } else {
-                    formatted_code.push_str(&INDENT_3.repeat(indentation_level));
+                    if let Some(prev_line) = formatted_code.lines().last() {
+                        let prev_indent_level = prev_line.chars().take_while(|&c| c == ' ').count() / 4;
+                        if prev_line.trim_start().starts_with("export") {
+                            formatted_code.push_str(&INDENT.repeat(prev_indent_level + 1));
+                        } else {
+                            formatted_code.push_str(&INDENT.repeat(indentation_level));
+                        }
+                    } else {
+                        formatted_code.push_str(&INDENT.repeat(indentation_level));
+                    }
+                    formatted_code.push_str(trimmed_line);
                 }
-                formatted_code.push_str(trimmed_line);
                 formatted_code.push('\n');
                 last_line_was_empty = false;
                 continue;
             }
+
+            if is_export_line(trimmed_line) {
+                construct_stack.push(ConstructType::ExportLine);
+                formatted_code.push_str(trimmed_line);
+                formatted_code.push('\n');
+                last_line_was_empty = false;
+                last_was_export_line = true;
+                continue;
+            }
+
+            last_was_export_line = false;
 
             if let Some(word) = first_word {
                 if let Some(construct) = ConstructType::from_str(word) {
@@ -88,15 +107,12 @@ pub fn format_code(code: &str) -> String {
                                 }
                             }
                         }
-                        ConstructType::Export => {
-                            construct_stack.push(construct.clone());
-                        }
                         _ => {
                             construct_stack.push(construct.clone());
                         }
                     }
 
-                    formatted_code.push_str(&INDENT_4.repeat(indentation_level));
+                    formatted_code.push_str(&INDENT.repeat(indentation_level));
                     formatted_code.push_str(trimmed_line);
                     formatted_code.push('\n');
                     last_line_was_empty = false;
@@ -105,6 +121,7 @@ pub fn format_code(code: &str) -> String {
                         ConstructType::Begin
                         | ConstructType::If
                         | ConstructType::Proc
+                        | ConstructType::Export
                         | ConstructType::Repeat
                         | ConstructType::While
                         | ConstructType::Else => {
@@ -117,12 +134,7 @@ pub fn format_code(code: &str) -> String {
                 }
             }
 
-            if construct_stack.last() == Some(&ConstructType::Export) {
-                formatted_code.push_str(&INDENT_5.repeat(indentation_level + 1));
-            } else {
-                formatted_code.push_str(&INDENT_6.repeat(indentation_level));
-            }
-
+            formatted_code.push_str(&INDENT.repeat(indentation_level));
             formatted_code.push_str(trimmed_line);
             formatted_code.push('\n');
             last_line_was_empty = false;
