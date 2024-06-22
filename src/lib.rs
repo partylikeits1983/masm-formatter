@@ -30,17 +30,47 @@ impl ConstructType {
     }
 }
 
+const INDENT_1: &str = "    ";
+const INDENT_2: &str = "    ";
+const INDENT_3: &str = "    ";
+const INDENT_4: &str = "    ";
+const INDENT_5: &str = "    ";
+const INDENT_6: &str = "    ";
+
+fn is_comment(line: &str) -> bool {
+    line.trim_start().starts_with('#')
+}
+
 pub fn format_code(code: &str) -> String {
     let mut formatted_code = String::new();
     let mut indentation_level = 0;
     let mut construct_stack = Vec::new();
     let mut last_line_was_empty = false;
 
-    for line in code.lines() {
+    let mut lines = code.lines().peekable();
+
+    while let Some(line) = lines.next() {
         let trimmed_line = line.trim();
         let first_word = trimmed_line.split('.').next();
 
         if !trimmed_line.is_empty() {
+            if is_comment(trimmed_line) {
+                if let Some(prev_line) = formatted_code.lines().last() {
+                    let prev_indent_level = prev_line.chars().take_while(|&c| c == ' ').count() / 4;
+                    if prev_line.trim_start().starts_with("export") {
+                        formatted_code.push_str(&INDENT_1.repeat(prev_indent_level + 1));
+                    } else {
+                        formatted_code.push_str(&INDENT_2.repeat(indentation_level));
+                    }
+                } else {
+                    formatted_code.push_str(&INDENT_3.repeat(indentation_level));
+                }
+                formatted_code.push_str(trimmed_line);
+                formatted_code.push('\n');
+                last_line_was_empty = false;
+                continue;
+            }
+
             if let Some(word) = first_word {
                 if let Some(construct) = ConstructType::from_str(word) {
                     match construct {
@@ -58,12 +88,15 @@ pub fn format_code(code: &str) -> String {
                                 }
                             }
                         }
+                        ConstructType::Export => {
+                            construct_stack.push(construct.clone());
+                        }
                         _ => {
                             construct_stack.push(construct.clone());
                         }
                     }
 
-                    formatted_code.push_str(&"    ".repeat(indentation_level)); // Use four spaces for indentation
+                    formatted_code.push_str(&INDENT_4.repeat(indentation_level));
                     formatted_code.push_str(trimmed_line);
                     formatted_code.push('\n');
                     last_line_was_empty = false;
@@ -74,22 +107,28 @@ pub fn format_code(code: &str) -> String {
                         | ConstructType::Proc
                         | ConstructType::Repeat
                         | ConstructType::While
-                        | ConstructType::Else
-                        | ConstructType::Export => {
+                        | ConstructType::Else => {
                             indentation_level += 1;
                         }
                         _ => {}
                     }
-                } else {
-                    formatted_code.push_str(&"    ".repeat(indentation_level)); // Use four spaces for indentation
-                    formatted_code.push_str(trimmed_line);
-                    formatted_code.push('\n');
-                    last_line_was_empty = false;
+
+                    continue;
                 }
             }
+
+            if construct_stack.last() == Some(&ConstructType::Export) {
+                formatted_code.push_str(&INDENT_5.repeat(indentation_level + 1));
+            } else {
+                formatted_code.push_str(&INDENT_6.repeat(indentation_level));
+            }
+
+            formatted_code.push_str(trimmed_line);
+            formatted_code.push('\n');
+            last_line_was_empty = false;
         } else {
             if !last_line_was_empty {
-                formatted_code.push('\n'); // Only add a single empty line
+                formatted_code.push('\n');
                 last_line_was_empty = true;
             }
         }
@@ -110,7 +149,6 @@ pub fn format_file(file_path: &Path) -> io::Result<()> {
 
     let formatted_code = format_code(&input_code);
 
-    // Write the formatted code back to the file
     let mut file = File::create(file_path)?;
     file.write_all(formatted_code.as_bytes())?;
 

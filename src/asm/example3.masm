@@ -1,0 +1,14 @@
+# comment
+export.proc_5
+    # comment should be indented
+
+# comment should be indented
+
+# comment should be indented
+    debug.stack
+end
+
+proc.timestamp
+    # comment should be indented
+    blockstamp
+end
