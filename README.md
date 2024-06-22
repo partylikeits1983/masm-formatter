@@ -10,3 +10,12 @@ This is a very basic Miden Assembly code formatter.
 That's pretty much it. 
 
 Would be cool to auto format comments, and maybe some other things. 
+
+#### Testing
+```
+cargo install --path .
+```
+
+```
+cargo masm-fmt "src/asm/example3.masm"
+```
