@@ -1,32 +1,33 @@
+use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
-use regex::Regex;
 
 #[derive(Debug, PartialEq, Clone)]
 enum ConstructType {
-    Begin,
-    If,
     Proc,
-    Repeat,
-    While,
-    End,
-    Else,
     Export,
-    ExportLine, 
+    ExportLine,
+    Begin,
+    End,
+    While,
+    Repeat,
+    If,
+    Else,
 }
 
 impl ConstructType {
     fn from_str(s: &str) -> Option<Self> {
         match s {
-            "begin" => Some(Self::Begin),
-            "if" => Some(Self::If),
-            "else" => Some(Self::Else),
             "proc" => Some(Self::Proc),
             "export" => Some(Self::Export),
-            "repeat" => Some(Self::Repeat),
-            "while" => Some(Self::While),
+            "exportLine" => Some(Self::ExportLine),
+            "begin" => Some(Self::Begin),
             "end" => Some(Self::End),
+            "while" => Some(Self::While),
+            "repeat" => Some(Self::Repeat),
+            "if" => Some(Self::If),
+            "else" => Some(Self::Else),
             _ => None,
         }
     }
@@ -51,9 +52,9 @@ pub fn format_code(code: &str) -> String {
     let mut last_line_was_empty = false;
     let mut last_was_export_line = false;
 
-    let mut lines = code.lines().peekable();
+    let lines = code.lines().peekable();
 
-    while let Some(line) = lines.next() {
+    for line in lines {
         let trimmed_line = line.trim();
         let first_word = trimmed_line.split('.').next();
 
@@ -63,7 +64,8 @@ pub fn format_code(code: &str) -> String {
                     formatted_code.push_str(trimmed_line);
                 } else {
                     if let Some(prev_line) = formatted_code.lines().last() {
-                        let prev_indent_level = prev_line.chars().take_while(|&c| c == ' ').count() / 4;
+                        let prev_indent_level =
+                            prev_line.chars().take_while(|&c| c == ' ').count() / 4;
                         if prev_line.trim_start().starts_with("export") {
                             formatted_code.push_str(&INDENT.repeat(prev_indent_level + 1));
                         } else {
@@ -138,11 +140,9 @@ pub fn format_code(code: &str) -> String {
             formatted_code.push_str(trimmed_line);
             formatted_code.push('\n');
             last_line_was_empty = false;
-        } else {
-            if !last_line_was_empty {
-                formatted_code.push('\n');
-                last_line_was_empty = true;
-            }
+        } else if !last_line_was_empty {
+            formatted_code.push('\n');
+            last_line_was_empty = true;
         }
     }
 
@@ -150,7 +150,7 @@ pub fn format_code(code: &str) -> String {
 }
 
 pub fn format_file(file_path: &Path) -> io::Result<()> {
-    let file = File::open(&file_path)?;
+    let file = File::open(file_path)?;
     let mut input_code = String::new();
 
     let reader = BufReader::new(file);
