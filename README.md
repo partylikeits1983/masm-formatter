@@ -16,10 +16,18 @@ Would be cool to auto format comments, and maybe some other things.
 This code formatter has been tested extensively, however, there may be edge cases where it fails.
 
 #### Testing
+
+#### Installing binary:
 ```
 cargo install --path .
 ```
 
+#### Formatting all files in a directory:
+```
+cargo masm-fmt "src/**/*.masm"
+```
+
+#### Formatting a single file in a directory:
 ```
 cargo masm-fmt "src/asm/example3.masm"
 ```
