@@ -17,7 +17,12 @@ This code formatter has been tested extensively, however, there may be edge case
 
 #### Testing
 
-#### Installing binary:
+#### Installing binary from crates
+````
+cargo install masm-formatter
+````
+
+#### Installing binary from repo:
 ```
 cargo install --path .
 ```
