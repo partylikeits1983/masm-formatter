@@ -2,7 +2,7 @@
 
 Basic Miden Assembly code formatter.
 
-The following keywords affect indentation rules in Miden Assembly: `begin`, `if`, `else`, `proc`, `export`, `repeat`, `while`, `end`.
+The following keywords affect indentation rules in Miden Assembly: `begin`, `proc`, `export`, `if`, `else`, `repeat`, `while`, `end`.
 
 #### Basic Rules this formatter follows:
 1) Adds correct indentation following the code formatting rules seen in the miden-base repository.
