@@ -7,7 +7,7 @@ The following keywords affect indentation rules in Miden Assembly: `begin`, `pro
 #### Basic Rules this formatter follows:
 1) Adds correct indentation following the code formatting rules seen in the miden-base repository.
 2) Removes trailing spaces.
-3) Deletes lines with more than 2 empty spaces.
+3) Removes empty lines.  
 
 That's pretty much it. 
 
