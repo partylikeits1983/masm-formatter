@@ -44,7 +44,7 @@ fn test_format_with_empty_lines() {
 
 #[test]
 fn test_format_example1() {
-    let input_path = Path::new("src/asm/example1.masm");
+    let input_path = Path::new("tests/unformatted/example1.masm");
     let expected_output_path = Path::new("tests/expected/example1_formatted.masm");
 
     let input_code = read_file_to_string(&input_path);
@@ -56,7 +56,7 @@ fn test_format_example1() {
 
 #[test]
 fn test_format_example2() {
-    let input_path = Path::new("src/asm/example2.masm");
+    let input_path = Path::new("tests/unformatted/example2.masm");
     let expected_output_path = Path::new("tests/expected/example2_formatted.masm");
 
     let input_code = read_file_to_string(&input_path);
@@ -68,8 +68,20 @@ fn test_format_example2() {
 
 #[test]
 fn test_format_example3() {
-    let input_path = Path::new("src/asm/example3.masm");
+    let input_path = Path::new("tests/unformatted/example3.masm");
     let expected_output_path = Path::new("tests/expected/example3_formatted.masm");
+
+    let input_code = read_file_to_string(&input_path);
+    let expected_output = read_file_to_string(&expected_output_path);
+
+    let formatted_code = format_code(&input_code);
+    assert_eq!(formatted_code, expected_output);
+}
+
+#[test]
+fn test_format_example4() {
+    let input_path = Path::new("tests/unformatted/example4.masm");
+    let expected_output_path = Path::new("tests/expected/example4_formatted.masm");
 
     let input_code = read_file_to_string(&input_path);
     let expected_output = read_file_to_string(&expected_output_path);
