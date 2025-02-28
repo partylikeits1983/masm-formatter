@@ -1,13 +1,13 @@
 [package]
 name = "masm-formatter"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["partylikeits1983 <aleqvids@gmail.com>"]
 edition = "2021"
 description = "A formatter for .masm files"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/partylikeits1983/masm-formatter"
-keywords = ["formatter", "polygon-miden", "assembly", "masm"]
+keywords = ["formatter", "polygon-miden", "miden", "zkVM", "assembly", "masm"]
 categories = ["command-line-utilities", "development-tools::formatters"]
 homepage = "https://github.com/partylikeits1983/masm-formatter"
 
