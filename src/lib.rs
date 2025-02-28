@@ -39,9 +39,8 @@ fn is_comment(line: &str) -> bool {
     line.trim_start().starts_with('#')
 }
 
-// to handle single line export statements
-fn is_export_line(line: &str) -> bool {
-    let re = Regex::new(r"^export\.\w+::\w+$").unwrap();
+fn is_single_export_line(line: &str) -> bool {
+    let re = Regex::new(r"^export\.\w*(::\w+)+$").unwrap();
     re.is_match(line)
 }
 
@@ -81,8 +80,7 @@ pub fn format_code(code: &str) -> String {
                 continue;
             }
 
-            if is_export_line(trimmed_line) {
-                construct_stack.push(ConstructType::ExportLine);
+            if is_single_export_line(trimmed_line) {
                 formatted_code.push_str(trimmed_line);
                 formatted_code.push('\n');
                 last_line_was_empty = false;
