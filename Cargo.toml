@@ -1,9 +1,9 @@
 [package]
 name = "masm-formatter"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["partylikeits1983 <aleqvids@gmail.com>"]
 edition = "2021"
-description = "A formatter for .masm files"
+description = "A formatter for Miden Assembly (.masm) files"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/partylikeits1983/masm-formatter"
