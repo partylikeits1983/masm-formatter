@@ -1,0 +1,382 @@
+use.std::collections::mmr
+use.std::collections::smt
+use.std::crypto::hashes::rpo
+use.std::mem
+
+use.kernel::util::account_id
+use.kernel::constants
+use.kernel::memory
+
+# ERRORS
+# =================================================================================================
+
+# Account nonce cannot be increased by a greater than u32 value
+const.ERR_ACCOUNT_NONCE_INCREASE_MUST_BE_U32=0x00020004
+
+# Account code must be updatable for it to be possible to set new code
+const.ERR_ACCOUNT_CODE_IS_NOT_UPDATABLE=0x00020006
+
+# Anchor block hash must not be empty
+const.ERR_ACCOUNT_ANCHOR_BLOCK_HASH_MUST_NOT_BE_EMPTY=0x00020007
+
+# ID of the new account does not match the ID computed from the seed and anchor block hash
+const.ERR_ACCOUNT_SEED_ANCHOR_BLOCK_HASH_DIGEST_MISMATCH=0x00020008
+
+# Failed to write an account value item to a non-value storage slot
+const.ERR_ACCOUNT_SETTING_VALUE_ITEM_ON_NON_VALUE_SLOT=0x00020009
+
+# Failed to write an account map item to a non-map storage slot
+const.ERR_ACCOUNT_SETTING_MAP_ITEM_ON_NON_MAP_SLOT=0x0002000A
+
+# Account procedure is not part of the account code
+const.ERR_ACCOUNT_PROC_NOT_PART_OF_ACCOUNT_CODE=0x0002000B
+
+# Provided procedure index is out of bounds
+const.ERR_ACCOUNT_PROC_INDEX_OUT_OF_BOUNDS=0x0002000C
+
+# Provided storage slot index is out of bounds
+const.ERR_STORAGE_SLOT_INDEX_OUT_OF_BOUNDS=0x0002000D
+
+# Storage offset is invalid for a faucet account (0 is prohibited as it is the reserved data slot for faucets)
+const.ERR_FAUCET_INVALID_STORAGE_OFFSET=0x0002000E
+
+# Computed account code commitment does not match recorded account code commitment
+const.ERR_ACCOUNT_CODE_COMMITMENT_MISMATCH=0x0002000F
+
+# Number of account procedures exceeds the maximum limit of 256
+const.ERR_ACCOUNT_TOO_MANY_PROCEDURES=0x00020010
+
+# Number of account storage slots exceeds the maximum limit of 255
+const.ERR_ACCOUNT_TOO_MANY_STORAGE_SLOTS=0x00020011
+
+# Computed account storage commitment does not match recorded account storage commitment
+const.ERR_ACCOUNT_STORAGE_COMMITMENT_MISMATCH=0x00020012
+
+# Storage offset is invalid for 0 storage size (should be 0)
+const.ERR_ACCOUNT_INVALID_STORAGE_OFFSET_FOR_SIZE=0x00020013
+
+# ID of the provided foreign account equals zero.
+const.ERR_FOREIGN_ACCOUNT_ID_IS_ZERO=0x00020014
+
+# Maximum allowed number of foreign account to be loaded (64) was exceeded.
+const.ERR_FOREIGN_ACCOUNT_MAX_NUMBER_EXCEEDED=0x00020015
+
+# Provided foreign account ID is equal to the native account ID.
+const.ERR_FOREIGN_ACCOUNT_ID_EQUALS_NATIVE_ACCT_ID=0x00020016
+
+# State of the current foreign account is invalid.
+const.ERR_FOREIGN_ACCOUNT_INVALID=0x00020017
+
+# Unknown version in account ID.
+const.ERR_ACCOUNT_ID_UNKNOWN_VERSION=0x00020057
+
+# Epoch must be less than u16::MAX (0xffff).
+const.ERR_ACCOUNT_ID_EPOCH_MUST_BE_LESS_THAN_U16_MAX=0x00020058
+
+# Unknown account storage mode in account ID.
+const.ERR_ACCOUNT_ID_UNKNOWN_STORAGE_MODE=0x00020059
+
+# Failed to read an account map item from a non-map storage slot
+const.ERR_ACCOUNT_READING_MAP_VALUE_FROM_NON_MAP_SLOT=0x00020002
+
+# CONSTANTS
+# =================================================================================================
+
+# The account storage slot at which faucet data is stored.
+# Fungible faucet: The faucet data consists of [0, 0, 0, total_issuance]
+# Non-fungible faucet: The faucet data consists of SMT root containing minted non-fungible assets.
+const.FAUCET_STORAGE_DATA_SLOT=0
+
+# The maximum storage slot index
+const.MAX_STORAGE_SLOT_INDEX=254
+
+# The maximum number of account storage slots.
+const.MAX_NUM_STORAGE_SLOTS=MAX_STORAGE_SLOT_INDEX+1
+
+# The maximum number of account interface procedures.
+const.MAX_NUM_PROCEDURES=256
+
+# Given the least significant 32 bits of an account ID's prefix, this mask defines the bits used
+# to determine the account version.
+const.ACCOUNT_VERSION_MASK_U32=0x0f # 0b1111
+
+# Given the least significant 32 bits of an account ID's prefix, this mask defines the bits used
+# to determine the account type.
+const.ACCOUNT_ID_TYPE_MASK_U32=0x30 # 0b11_0000
+
+# Given the least significant 32 bits of an account ID's first felt, this mask defines the bits used
+# to determine the account storage mode.
+const.ACCOUNT_ID_STORAGE_MODE_MASK_U32=0xC0 # 0b1100_0000
+
+# Given the least significant 32 bits of an account ID's first felt with the storage mode mask
+# applied, this value defines the public storage mode.
+const.ACCOUNT_ID_STORAGE_MODE_PUBLIC_U32=0 # 0b0000_0000
+
+# Given the least significant 32 bits of an account ID's first felt with the storage mode mask
+# applied, this value defines the private storage mode.
+const.ACCOUNT_ID_STORAGE_MODE_PRIVATE_U32=0x80 # 0b1000_0000
+
+# Bit pattern for an account w/ immutable code, after the account type mask has been applied.
+const.REGULAR_ACCOUNT_IMMUTABLE_CODE=0 # 0b00_0000
+
+# Bit pattern for an account w/ updatable code, after the account type mask has been applied.
+const.REGULAR_ACCOUNT_UPDATABLE_CODE=0x10 # 0b01_0000
+
+# Bit pattern for a fungible faucet w/ immutable code, after the account type mask has been applied.
+const.FUNGIBLE_FAUCET_ACCOUNT=0x20 # 0b10_0000
+
+# Bit pattern for a non-fungible faucet w/ immutable code, after the account type mask has been
+# applied.
+const.NON_FUNGIBLE_FAUCET_ACCOUNT=0x30 # 0b11_0000
+
+# Bit pattern for a faucet account, after the account type mask has been applied.
+const.FAUCET_ACCOUNT=0x20 # 0b10_0000
+
+# Depth of the account database tree.
+const.ACCOUNT_TREE_DEPTH=64
+
+# The number of field elements it takes to store one account storage slot.
+const.ACCOUNT_STORAGE_SLOT_DATA_LENGTH=8
+
+# The number of field elements it takes to store one account procedure.
+const.ACCOUNT_PROCEDURE_DATA_LENGTH=8
+
+# EVENTS
+# =================================================================================================
+
+# Event emitted before an account storage item is updated.
+const.ACCOUNT_STORAGE_BEFORE_SET_ITEM_EVENT=131076
+# Event emitted after an account storage item is updated.
+const.ACCOUNT_STORAGE_AFTER_SET_ITEM_EVENT=131077
+
+# Event emitted before an account storage map item is updated.
+const.ACCOUNT_STORAGE_BEFORE_SET_MAP_ITEM_EVENT=131078
+# Event emitted after an account storage map item is updated.
+const.ACCOUNT_STORAGE_AFTER_SET_MAP_ITEM_EVENT=131079
+
+# Event emitted before an account nonce is incremented.
+const.ACCOUNT_BEFORE_INCREMENT_NONCE_EVENT=131080
+# Event emitted after an account nonce is incremented.
+const.ACCOUNT_AFTER_INCREMENT_NONCE_EVENT=131081
+
+# Event emitted to push the index of the account procedure at the top of the operand stack onto
+# the advice stack.
+const.ACCOUNT_PUSH_PROCEDURE_INDEX_EVENT=131082
+
+# CONSTANT ACCESSORS
+# =================================================================================================
+
+#! Returns the account storage slot at which faucet data is stored.
+#! Fungible faucet: The faucet data consists of [0, 0, 0, total_issuance]
+#! Non-fungible faucet: The faucet data consists of SMT root containing minted non-fungible assets.
+#!
+#! Inputs:  []
+#! Outputs: [faucet_storage_data_slot]
+#!
+#! Where:
+#! - faucet_storage_data_slot is the account storage slot at which faucet data is stored.
+export.get_faucet_storage_data_slot 
+    push.FAUCET_STORAGE_DATA_SLOT
+end
+
+#! Returns the maximum number of account storage slots.
+#!
+#! Inputs:  []
+#! Outputs: [max_num_storage_slots]
+#!
+#! Where:
+#! - max_num_storage_slots is the maximum number of account storage slots.
+export.get_max_num_storage_slots
+      push.MAX_NUM_STORAGE_SLOTS
+end
+
+#! Returns the maximum number of account interface procedures.
+#!
+#! Inputs:  []
+#! Outputs: [max_num_procedures]
+#!
+#! Where:
+#! - max_num_procedures is the maximum number of account interface procedures.
+export.get_max_num_procedures
+    push.MAX_NUM_PROCEDURES
+end
+
+# PROCEDURES
+# =================================================================================================
+
+#! Computes and returns the account hash from account data stored in memory.
+#!
+#! Inputs:  []
+#! Outputs: [ACCT_HASH]
+#!
+#! Where:
+#! - ACCT_HASH is the hash of the account data.
+export.get_current_hash
+    # prepare the stack for computing the account hash
+    exec.memory::get_current_account_data_ptr padw padw padw
+
+      # stream account data and compute sequential hash. We perform two `mem_stream` operations
+      # because account data consists of exactly 4 words.
+      mem_stream hperm mem_stream hperm
+
+
+
+      # extract account hash
+      exec.rpo::squeeze_digest
+
+      # drop memory pointer
+      movup.4 drop
+end
+
+#! Increments the account nonce by the provided value.
+#!
+#! Inputs:  [value]
+#! Outputs: []
+#!
+#! Where:
+#! - value is the value to increment the nonce by. value can be at most 2^32 - 1 otherwise this
+#!   procedure panics.
+export.incr_nonce
+    u32assert.err=ERR_ACCOUNT_NONCE_INCREASE_MUST_BE_U32
+
+    # emit event to signal that account nonce is being incremented
+    emit.ACCOUNT_BEFORE_INCREMENT_NONCE_EVENT
+
+    exec.memory::get_acct_nonce add
+    exec.memory::set_acct_nonce
+
+    emit.ACCOUNT_AFTER_INCREMENT_NONCE_EVENT
+end
+
+#! Returns the account ID.
+#!
+#! Inputs:  []
+#! Outputs: [acct_id]
+#!
+#! Where:
+#! - acct_id is the account ID.
+export.memory::get_account_id->get_id
+
+    #! Returns the account nonce.
+    #!
+    #! Inputs:  []
+    #! Outputs: [nonce]
+    #!
+    #! Where:
+    #! - nonce is the account nonce.
+    export.memory::get_acct_nonce->get_nonce
+
+#! Returns the initial account hash.
+#!
+#! Inputs:  []
+#! Outputs: [INIT_HASH]
+#!
+#! Where:
+#! - INIT_HASH is the initial account hash.
+export.memory::get_init_acct_hash->get_initial_hash
+
+#! Returns a boolean indicating whether the account is a fungible faucet.
+#!
+#! Inputs:  [acct_id_prefix]
+#! Outputs: [is_fungible_faucet]
+#!
+#! Where:
+#! - acct_id_prefix is the prefix of the account ID.
+#! - is_fungible_faucet is a boolean indicating whether the account is a fungible faucet.
+export.::kernel::util::account_id::is_fungible_faucet
+
+#! Returns a boolean indicating whether the account is a non-fungible faucet.
+#!
+#! Inputs:  [acct_id_prefix]
+#! Outputs: [is_non_fungible_faucet]
+#!
+#! Where:
+#! - acct_id_prefix is the prefix of the account ID.
+#! - is_non_fungible_faucet is a boolean indicating whether the account is a non-fungible faucet.
+export.::kernel::util::account_id::is_non_fungible_faucet
+
+#! Returns a boolean indicating whether the account is a faucet.
+#!
+#! Inputs:  [acct_id_prefix]
+#! Outputs: [is_faucet]
+#!
+#! Where:
+#! - acct_id_prefix is the prefix of the account ID.
+#! - is_faucet is a boolean indicating whether the account is a faucet.
+export.::kernel::util::account_id::is_faucet
+
+#! Returns a boolean indicating whether the account is a regular updatable account.
+#!
+#! Inputs:  [acct_id_prefix]
+#! Outputs: [is_updatable_account]
+#!
+#! Where:
+#! - acct_id_prefix is the prefix of the account ID.
+#! - is_updatable_account is a boolean indicating whether the account is a regular updatable
+#!   account.
+export.::kernel::util::account_id::is_updatable_account
+
+#! Returns a boolean indicating whether the account is a regular immutable account.
+#!
+#! Inputs:  [acct_id_prefix]
+#! Outputs: [is_immutable_account]
+#!
+#! Where:
+#! - acct_id_prefix is the prefix of the account ID.
+#! - is_immutable_account is a boolean indicating whether the account is a regular immutable
+#!   account.
+export.::kernel::util::account_id::is_immutable_account
+
+#! Returns a boolean indicating whether the given account_ids are equal.
+#!
+#! Inputs:  [acct_id_prefix, acct_id_suffix, other_acct_id_prefix, other_acct_id_suffix]
+#! Outputs: [is_id_equal]
+#!
+#! Where:
+#! - acct_id_{prefix,suffix} are the prefix and suffix felts of an account ID.
+#! - other_acct_id_{prefix,suffix} are the prefix and suffix felts of the other account ID to
+#!   compare against.
+#! - is_id_equal is a boolean indicating whether the account IDs are equal.
+export.::kernel::util::account_id::is_equal->is_id_equal
+
+#! Validates an account ID. Note that this does not validate anything about the account type,
+#! since any bit pattern is a valid account type.
+#!
+#! Inputs:  [account_id_prefix, account_id_suffix]
+#! Outputs: []
+#!
+#! Where:
+#! - account_id_{prefix,suffix} are the prefix and suffix felts of the account ID.
+#!
+#! Panics if:
+#! - account_id_prefix does not contain version zero.
+#! - account_id_prefix does not contain either the public or private storage mode.
+#! - account_id_suffix contains an anchor epoch that is greater or equal to 2^16.
+#! - account_id_suffix does not have its lower 8 bits set to zero.
+export.::kernel::util::account_id::validate->validate_id
+
+#! Gets the code commitment of the account the transaction is being executed against.
+#!
+#! Inputs:  []
+#! Outputs: [CODE_COMMITMENT]
+#!
+#! Where:
+#! - CODE_COMMITMENT is the hash of the account code.
+export.get_code_commitment
+    # get the code commitment
+    exec.memory::get_acct_code_commitment
+    # => [CODE_COMMITMENT]
+end
+
+  #! Gets the storage commitment of the account the transaction is being executed against.
+  #!
+  #! Inputs:  []
+  #! Outputs: [STORAGE_COMMITMENT]
+  #!
+  #! Where:
+  #! - STORAGE_COMMITMENT is the hash of the account code.
+  export.get_storage_commitment
+      # get the storage commitment
+      exec.memory::get_acct_storage_commitment
+      # => [STORAGE_COMMITMENT]
+  end

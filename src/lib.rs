@@ -4,7 +4,8 @@ use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
 
-static EXPORT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^export\.\w*(::\w+)+$").unwrap());
+static SINGLE_LINE_EXPORT_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^export\..*(?:(?:::)|(?:->)).*$").unwrap());
 
 #[derive(Debug, PartialEq, Clone)]
 enum ConstructType {
@@ -43,7 +44,7 @@ fn is_comment(line: &str) -> bool {
 }
 
 fn is_single_export_line(line: &str) -> bool {
-    EXPORT_REGEX.is_match(line)
+    SINGLE_LINE_EXPORT_REGEX.is_match(line)
 }
 
 pub fn format_code(code: &str) -> String {
