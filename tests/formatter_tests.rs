@@ -93,8 +93,10 @@ fn test_format_example4() {
     assert_eq!(formatted_code, expected_output);
 }
 
+
+
 #[test]
-fn test_nested_directory_formatting() {
+fn test_nested_directory_formatting_example5() {
     // Create a temporary directory.
     let temp_dir = tempdir().expect("Failed to create temp dir");
     let temp_nested_dir = temp_dir.path().join("nested_dir_test");
@@ -129,4 +131,28 @@ fn test_nested_directory_formatting() {
             "The file content did not change after formatting."
         );
     }
+}
+
+#[test]
+fn test_format_example6() {
+    let input_path = Path::new("tests/unformatted/example6.masm");
+    let expected_output_path = Path::new("tests/expected/example6_formatted.masm");
+
+    let input_code = read_file_to_string(&input_path);
+    let expected_output = read_file_to_string(&expected_output_path);
+
+    let formatted_code = format_code(&input_code);
+    assert_eq!(formatted_code, expected_output);
+}
+
+#[test]
+fn test_format_example7() {
+    let input_path = Path::new("tests/unformatted/example7.masm");
+    let expected_output_path = Path::new("tests/expected/example7_formatted.masm");
+
+    let input_code = read_file_to_string(&input_path);
+    let expected_output = read_file_to_string(&expected_output_path);
+
+    let formatted_code = format_code(&input_code);
+    assert_eq!(formatted_code, expected_output);
 }

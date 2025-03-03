@@ -97,7 +97,6 @@ pub fn format_code(code: &str) -> String {
             let first_word = code_without_comment.split('.').next();
 
             if let Some(word) = first_word {
-                println!("word: {:?}", first_word);
                 if let Some(construct) = ConstructType::from_str(word) {
                     match construct {
                         ConstructType::End => {
@@ -150,6 +149,12 @@ pub fn format_code(code: &str) -> String {
             last_line_was_empty = true;
         }
     }
+
+    // Ensure the output ends with exactly one newline.
+    while formatted_code.ends_with('\n') {
+        formatted_code.pop();
+    }
+    formatted_code.push('\n');
 
     formatted_code
 }

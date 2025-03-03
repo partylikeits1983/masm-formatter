@@ -4,4 +4,10 @@
 
 export.::miden::contracts::wallets::basic::receive_asset
 export.::miden::contracts::wallets::basic::create_note
-export.::miden::contracts::wallets::basic::move_asset_to_note
+export.::miden::util::account_id::is_equal->is_id_equal
+
+proc.test_proc
+    add
+    dup
+    # some comment
+end
