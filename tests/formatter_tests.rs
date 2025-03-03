@@ -93,8 +93,6 @@ fn test_format_example4() {
     assert_eq!(formatted_code, expected_output);
 }
 
-
-
 #[test]
 fn test_nested_directory_formatting_example5() {
     // Create a temporary directory.

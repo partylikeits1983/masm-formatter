@@ -11,7 +11,6 @@ static SINGLE_LINE_EXPORT_REGEX: Lazy<Regex> =
 enum ConstructType {
     Proc,
     Export,
-    ExportLine,
     Begin,
     End,
     While,
@@ -25,7 +24,6 @@ impl ConstructType {
         match s {
             "proc" => Some(Self::Proc),
             "export" => Some(Self::Export),
-            "exportLine" => Some(Self::ExportLine),
             "begin" => Some(Self::Begin),
             "end" => Some(Self::End),
             "while" => Some(Self::While),
@@ -58,7 +56,7 @@ pub fn format_code(code: &str) -> String {
 
     for line in lines {
         let trimmed_line = line.trim();
-        
+
         if !trimmed_line.is_empty() {
             if is_comment(trimmed_line) {
                 if last_was_export_line {
@@ -91,7 +89,7 @@ pub fn format_code(code: &str) -> String {
             }
 
             last_was_export_line = false;
-            
+
             // Remove inline comment for keyword extraction.
             let code_without_comment = trimmed_line.split('#').next().unwrap().trim();
             let first_word = code_without_comment.split('.').next();
@@ -166,7 +164,7 @@ pub fn format_file(file_path: &Path) -> io::Result<()> {
     let reader = BufReader::new(file);
     for line in reader.lines() {
         input_code.push_str(&line?);
-        input_code.push('\n');
+        input_code.push_str("\n");
     }
 
     let formatted_code = format_code(&input_code);
