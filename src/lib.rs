@@ -58,8 +58,7 @@ pub fn format_code(code: &str) -> String {
 
     for line in lines {
         let trimmed_line = line.trim();
-        let first_word = trimmed_line.split('.').next();
-
+        
         if !trimmed_line.is_empty() {
             if is_comment(trimmed_line) {
                 if last_was_export_line {
@@ -92,8 +91,13 @@ pub fn format_code(code: &str) -> String {
             }
 
             last_was_export_line = false;
+            
+            // Remove inline comment for keyword extraction.
+            let code_without_comment = trimmed_line.split('#').next().unwrap().trim();
+            let first_word = code_without_comment.split('.').next();
 
             if let Some(word) = first_word {
+                println!("word: {:?}", first_word);
                 if let Some(construct) = ConstructType::from_str(word) {
                     match construct {
                         ConstructType::End => {
