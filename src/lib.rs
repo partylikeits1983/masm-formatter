@@ -1,7 +1,10 @@
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
+
+static EXPORT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^export\.\w*(::\w+)+$").unwrap());
 
 #[derive(Debug, PartialEq, Clone)]
 enum ConstructType {
@@ -40,8 +43,7 @@ fn is_comment(line: &str) -> bool {
 }
 
 fn is_single_export_line(line: &str) -> bool {
-    let re = Regex::new(r"^export\.\w*(::\w+)+$").unwrap();
-    re.is_match(line)
+    EXPORT_REGEX.is_match(line)
 }
 
 pub fn format_code(code: &str) -> String {

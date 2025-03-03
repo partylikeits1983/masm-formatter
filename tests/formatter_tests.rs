@@ -1,7 +1,10 @@
+use std::fs;
 use std::fs::read_to_string;
 use std::path::Path;
+use tempfile::tempdir;
 
-use masm_formatter::format_code;
+// Import the formatting functions from your crate.
+use masm_formatter::{format_code, format_file};
 
 fn read_file_to_string(path: &Path) -> String {
     read_to_string(path).expect("Unable to read file")
@@ -88,4 +91,42 @@ fn test_format_example4() {
 
     let formatted_code = format_code(&input_code);
     assert_eq!(formatted_code, expected_output);
+}
+
+#[test]
+fn test_nested_directory_formatting() {
+    // Create a temporary directory.
+    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_nested_dir = temp_dir.path().join("nested_dir_test");
+    fs::create_dir_all(&temp_nested_dir).expect("Failed to create nested dir in temp");
+
+    // Copy the original file from tests/unformatted/nested_dir_test/example5.masm
+    let src_path = Path::new("tests/unformatted/nested_dir_test/example5.masm");
+    let dest_path = temp_nested_dir.join("example5.masm");
+    fs::copy(&src_path, &dest_path).expect("Failed to copy file to temp directory");
+
+    // Read the original content from the temporary file.
+    let original_content = read_file_to_string(&dest_path);
+
+    // Run the formatter on the temporary file.
+    format_file(&dest_path).expect("Formatting failed");
+
+    // Read the formatted content.
+    let formatted_content = read_file_to_string(&dest_path);
+
+    // If you have an expected formatted file, you can compare with it.
+    let expected_path = Path::new("tests/expected/example5_formatted.masm");
+    if expected_path.exists() {
+        let expected_content = read_file_to_string(&expected_path);
+        assert_eq!(
+            formatted_content, expected_content,
+            "The file was not formatted as expected."
+        );
+    } else {
+        // Otherwise, ensure that formatting has changed the content.
+        assert_ne!(
+            formatted_content, original_content,
+            "The file content did not change after formatting."
+        );
+    }
 }
