@@ -41,6 +41,10 @@ fn is_comment(line: &str) -> bool {
     line.trim_start().starts_with('#')
 }
 
+fn is_stack_comment(line: &str) -> bool {
+    line.trim_start().starts_with("# =>")
+}
+
 fn is_single_export_line(line: &str) -> bool {
     SINGLE_LINE_EXPORT_REGEX.is_match(line)
 }
@@ -51,6 +55,7 @@ pub fn format_code(code: &str) -> String {
     let mut construct_stack = Vec::new();
     let mut last_line_was_empty = false;
     let mut last_was_export_line = false;
+    let mut last_line_was_stack_comment = false;
 
     let lines = code.lines().peekable();
 
@@ -59,6 +64,12 @@ pub fn format_code(code: &str) -> String {
 
         if !trimmed_line.is_empty() {
             if is_comment(trimmed_line) {
+                if is_stack_comment(trimmed_line) {
+                    last_line_was_stack_comment = true;
+                } else {
+                    last_line_was_stack_comment = false;
+                }
+
                 if last_was_export_line {
                     formatted_code.push_str(trimmed_line);
                 } else {
@@ -93,6 +104,15 @@ pub fn format_code(code: &str) -> String {
             // Remove inline comment for keyword extraction.
             let code_without_comment = trimmed_line.split('#').next().unwrap().trim();
             let first_word = code_without_comment.split('.').next();
+
+            // Special handling for stack comment newline
+            if last_line_was_stack_comment && first_word.is_some() {
+                let word = first_word.unwrap();
+                if word != "end" && !last_line_was_empty {
+                    formatted_code.push('\n');
+                }
+                last_line_was_stack_comment = false;
+            }
 
             if let Some(word) = first_word {
                 if let Some(construct) = ConstructType::from_str(word) {

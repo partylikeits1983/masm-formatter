@@ -154,3 +154,15 @@ fn test_format_example7() {
     let formatted_code = format_code(&input_code);
     assert_eq!(formatted_code, expected_output);
 }
+
+#[test]
+fn test_format_example8() {
+    let input_path = Path::new("tests/unformatted/example8.masm");
+    let expected_output_path = Path::new("tests/expected/example8_formatted.masm");
+
+    let input_code = read_file_to_string(&input_path);
+    let expected_output = read_file_to_string(&expected_output_path);
+
+    let formatted_code = format_code(&input_code);
+    assert_eq!(formatted_code, expected_output);
+}
