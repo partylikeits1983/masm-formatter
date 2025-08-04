@@ -1,11 +1,10 @@
+use.kernel::constants
+use.kernel::memory
+use.kernel::util::account_id
 use.std::collections::mmr
 use.std::collections::smt
 use.std::crypto::hashes::rpo
 use.std::mem
-
-use.kernel::util::account_id
-use.kernel::constants
-use.kernel::memory
 
 # ERRORS
 # =================================================================================================

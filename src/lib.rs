@@ -49,7 +49,40 @@ fn is_single_export_line(line: &str) -> bool {
     SINGLE_LINE_EXPORT_REGEX.is_match(line)
 }
 
+fn is_use_statement(line: &str) -> bool {
+    line.trim_start().starts_with("use.")
+}
+
+fn extract_and_sort_imports(lines: &[&str]) -> (Vec<String>, usize) {
+    let mut imports = Vec::new();
+    let mut import_end_index = 0;
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if is_use_statement(trimmed) {
+            imports.push(trimmed.to_string());
+            import_end_index = i + 1;
+        } else if !trimmed.is_empty() {
+            // Stop collecting imports when we hit non-empty, non-import line
+            break;
+        } else if !imports.is_empty() {
+            // Include empty lines that come after imports but before other content
+            import_end_index = i + 1;
+        }
+    }
+
+    // Sort imports alphabetically
+    imports.sort();
+
+    (imports, import_end_index)
+}
+
 pub fn format_code(code: &str) -> String {
+    let lines: Vec<&str> = code.lines().collect();
+
+    // Extract and sort imports
+    let (sorted_imports, import_end_index) = extract_and_sort_imports(&lines);
+
     let mut formatted_code = String::new();
     let mut indentation_level = 0;
     let mut construct_stack = Vec::new();
@@ -57,9 +90,23 @@ pub fn format_code(code: &str) -> String {
     let mut last_was_export_line = false;
     let mut last_line_was_stack_comment = false;
 
-    let lines = code.lines().peekable();
+    // Add sorted imports first
+    for import in sorted_imports {
+        formatted_code.push_str(&import);
+        formatted_code.push('\n');
+    }
 
-    for line in lines {
+    // Add empty line after imports if there were any and the next line isn't empty
+    if import_end_index > 0 && import_end_index < lines.len() {
+        if !lines[import_end_index].trim().is_empty() {
+            formatted_code.push('\n');
+        }
+    }
+
+    // Process remaining lines (skip the import section)
+    let remaining_lines = &lines[import_end_index..];
+
+    for line in remaining_lines {
         let trimmed_line = line.trim();
 
         if !trimmed_line.is_empty() {

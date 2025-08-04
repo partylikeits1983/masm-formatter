@@ -9,7 +9,8 @@ use std::process;
 #[command(
     bin_name = "cargo",
     subcommand_required = true,
-    arg_required_else_help = true
+    arg_required_else_help = true,
+    version = "0.1.9"
 )]
 enum Cli {
     #[command(name = "masm-fmt")]

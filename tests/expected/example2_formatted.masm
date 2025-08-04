@@ -1,10 +1,11 @@
-use.miden::note
-use.miden::contracts::wallets::basic->wallet
-use.miden::tx
 use.miden::account
-use.std::sys
+use.miden::contracts::wallets::basic->wallet
+use.miden::note
+use.miden::tx
 use.std::crypto::hashes::native
 use.std::math::u64
+use.std::sys
+
 # CONSTANTS
 # =================================================================================================
 
