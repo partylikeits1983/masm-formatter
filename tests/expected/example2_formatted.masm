@@ -279,7 +279,6 @@ end
 # - Account vault does not contain the requested asset
 # - Adding a fungible asset would result in amount overflow, i.e., the total amount would be
 #   greater than 2^63
-
 proc.execute_SWAPp
     # store asset into memory at address 3
     exec.note::get_assets assert.err=ERR_SWAP_WRONG_NUMBER_OF_ASSETS

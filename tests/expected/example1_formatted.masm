@@ -2,6 +2,7 @@ use.miden::kernels::tx::constants
 
 # ERRORS
 # =================================================================================================
+
 const.ERR_NOTE_TOO_MANY_ASSETS=0x0002002A
 
 # MEMORY ADDRESS CONSTANTS

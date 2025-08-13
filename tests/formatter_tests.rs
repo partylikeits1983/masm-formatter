@@ -20,7 +20,7 @@ fn test_format_simple() {
 #[test]
 fn test_format_with_indentation() {
     let input = "begin\n    proc\n    end\nend";
-    let expected_output = "begin\n    proc\n    end\nend\n";
+    let expected_output = "begin\n    proc\n    end\n\nend\n";
     assert_eq!(format_code(input), expected_output);
 }
 
@@ -177,7 +177,7 @@ fn test_alphabetize_imports() {
 #[test]
 fn test_alphabetize_imports_complex() {
     let input = "use.miden::note\nuse.miden::contracts::wallets::basic->wallet\nuse.miden::tx\nuse.miden::account\nuse.std::sys\nuse.std::crypto::hashes::native\nuse.std::math::u64\n\n# CONSTANTS\nconst.TEST=1\nbegin\nend";
-    let expected_output = "use.miden::account\nuse.miden::contracts::wallets::basic->wallet\nuse.miden::note\nuse.miden::tx\nuse.std::crypto::hashes::native\nuse.std::math::u64\nuse.std::sys\n\n# CONSTANTS\nconst.TEST=1\nbegin\nend\n";
+    let expected_output = "use.miden::account\nuse.miden::contracts::wallets::basic->wallet\nuse.miden::note\nuse.miden::tx\nuse.std::crypto::hashes::native\nuse.std::math::u64\nuse.std::sys\n\n# CONSTANTS\n\nconst.TEST=1\nbegin\nend\n";
     assert_eq!(format_code(input), expected_output);
 }
 

@@ -1,23 +1,15 @@
+use std::{fs, io, path::Path, process};
+
 use clap::Parser;
 use masm_formatter::{format_code, format_file};
-use std::fs;
-use std::io;
-use std::path::Path;
-use std::process;
 
 #[derive(Parser)]
 #[command(
-    bin_name = "cargo",
-    subcommand_required = true,
+    bin_name = "masm-fmt",
+    subcommand_required = false,
     arg_required_else_help = true,
-    version = "0.1.9"
+    version = "0.3.0"
 )]
-enum Cli {
-    #[command(name = "masm-fmt")]
-    MasmFmt(MasmFmtArgs),
-}
-
-#[derive(Parser)]
 struct MasmFmtArgs {
     /// The folder or file path to search for .masm files.
     ///
@@ -25,8 +17,8 @@ struct MasmFmtArgs {
     /// or a file path to format a single file.
     ///
     /// Example:
-    ///     cargo masm-fmt source_dir
-    ///     cargo masm-fmt some_file.masm
+    ///     masm-fmt source_dir
+    ///     masm-fmt some_file.masm
     path: String,
     /// Check for formatting issues without writing changes.
     #[arg(long)]
@@ -50,11 +42,11 @@ fn process_path(path: &Path, check: bool) -> io::Result<bool> {
             let original = fs::read_to_string(path)?;
             let formatted = format_code(&original);
             if original != formatted {
-                println!("File is not formatted correctly: {:?}", path);
+                println!("File is not formatted correctly: {path:?}");
                 unformatted_found = true;
             }
         } else {
-            println!("Formatting file: {:?}", path);
+            println!("Formatting file: {path:?}");
             format_file(path)?;
         }
     }
@@ -62,44 +54,41 @@ fn process_path(path: &Path, check: bool) -> io::Result<bool> {
 }
 
 fn main() -> io::Result<()> {
-    let args = Cli::parse();
+    let args = MasmFmtArgs::parse();
 
-    match args {
-        Cli::MasmFmt(args) => {
-            let source_path = Path::new(&args.path);
-            if source_path.exists() {
-                let unformatted = if source_path.is_file() {
-                    if source_path.extension().and_then(|s| s.to_str()) == Some("masm") {
-                        if args.check {
-                            let original = fs::read_to_string(source_path)?;
-                            let formatted = format_code(&original);
-                            if original != formatted {
-                                println!("File is not formatted correctly: {:?}", source_path);
-                                true
-                            } else {
-                                false
-                            }
-                        } else {
-                            println!("Formatting file: {:?}", source_path);
-                            format_file(source_path)?;
-                            false
-                        }
+    let source_path = Path::new(&args.path);
+    if source_path.exists() {
+        let unformatted = if source_path.is_file() {
+            if source_path.extension().and_then(|s| s.to_str()) == Some("masm") {
+                if args.check {
+                    let original = fs::read_to_string(source_path)?;
+                    let formatted = format_code(&original);
+                    if original != formatted {
+                        println!("File is not formatted correctly: {source_path:?}");
+                        true
                     } else {
-                        eprintln!("The specified file is not a .masm file: {:?}", source_path);
                         false
                     }
                 } else {
-                    process_path(source_path, args.check)?
-                };
-
-                if args.check && unformatted {
-                    eprintln!("Formatting check failed: some files are not formatted correctly.");
-                    process::exit(1);
+                    println!("Formatting file: {source_path:?}");
+                    format_file(source_path)?;
+                    false
                 }
             } else {
-                eprintln!("The specified path does not exist: {}", args.path);
+                eprintln!("The specified file is not a .masm file: {source_path:?}");
+                false
             }
+        } else {
+            process_path(source_path, args.check)?
+        };
+
+        if args.check && unformatted {
+            eprintln!("Formatting check failed: some files are not formatted correctly.");
+            process::exit(1);
         }
+    } else {
+        eprintln!("The specified path does not exist: {}", args.path);
     }
+
     Ok(())
 }
