@@ -8,7 +8,7 @@ use masm_formatter::{format_code, format_file};
     bin_name = "masm-fmt",
     subcommand_required = false,
     arg_required_else_help = true,
-    version = "0.3.0"
+    version = "0.3.3"
 )]
 struct MasmFmtArgs {
     /// The folder or file path to search for .masm files.

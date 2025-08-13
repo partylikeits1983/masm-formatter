@@ -1,16 +1,16 @@
+use.kernel::constants
+use.kernel::memory
+use.kernel::util::account_id
 use.std::collections::mmr
 use.std::collections::smt
 use.std::crypto::hashes::rpo
 use.std::mem
 
-use.kernel::util::account_id
-use.kernel::constants
-use.kernel::memory
-
 # ERRORS
 # =================================================================================================
 
 # Account nonce cannot be increased by a greater than u32 value
+
 const.ERR_ACCOUNT_NONCE_INCREASE_MUST_BE_U32=0x00020004
 
 # Account code must be updatable for it to be possible to set new code
