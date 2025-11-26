@@ -1,0 +1,79 @@
+@locals(1)
+pub proc foo
+    loc_load.0
+end
+
+@locals(1)
+proc bar
+    loc_load.0
+end
+
+#! Returns true if LHS is strictly greater than RHS, false otherwise.
+#!
+#! This compares words using the same ordering as Merkle tree key comparisons.
+#!
+#! The implementation avoids branching for performance reasons.
+#!
+#! For reference, this is equivalent to the following Rust function:
+#!
+#! fn is_word_greater(word1: Word, word2: Word) -> bool {
+#!     let mut result = false;
+#!     let mut cont = true;
+#!
+#!     for i in (0..4).rev() {
+#!         let gt = word1[i].as_int() > word2[i].as_int();
+#!         let eq = word1[i].as_int() == word2[i].as_int();
+#!         result |= gt & cont;
+#!         cont &= eq;
+#!     }
+#!
+#!     result
+#! }
+#!
+#! Inputs:  [RHS, LHS]
+#! Outputs: [is_lhs_greater]
+#!
+#! Cycles: 117
+pub proc gt(rhs: word, lhs: word) -> i1
+    # => [r_3, r_2, r_1, r_0, l_3, l_2, l_1, l_0]
+
+    exec.arrange_words_adjacent
+    # => [l_3, r_3, l_2, r_2, l_1, r_1, l_0, r_0]
+
+    push.1.0
+    # => [is_lhs_less, continue, l_3, r_3, l_2, r_2, l_1, r_1, l_0, r_0]
+
+    repeat.4
+        movup.3 movup.3
+        # => [l_x, r_x, is_lhs_less, continue, <remaining_felts>]
+
+        # check r_x == l_x; if so, we continue
+        dup dup.2 eq
+        # => [is_felt_eq, l_x, r_x, is_lhs_less, continue, <remaining_felts>]
+
+        movdn.3
+        # => [l_x, r_x, is_lhs_less, is_felt_eq, continue, <remaining_felts>]
+
+        # check r_x < l_x
+        lt
+        # => [is_felt_lt, is_lhs_less, is_felt_eq, continue, <remaining_felts>]
+
+        dup.3 and
+        # => [is_felt_lt_if_continue, is_lhs_less, is_felt_eq, continue, <remaining_felts>]
+
+        or movdn.2
+        # => [is_felt_eq, continue, is_lhs_less, <remaining_felts>]
+
+        # keeps continue at 1 if the felts are equal
+        # sets continue to 0 if the felts are not equal
+        and
+        # => [continue, is_lhs_less, <remaining_felts>]
+
+        swap
+        # => [is_lhs_less, continue, <remaining_felts>]
+    end
+    # => [is_lhs_less, continue]
+
+    swap drop
+    # => [is_lhs_less]
+end

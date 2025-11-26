@@ -57,9 +57,17 @@ fn is_use_statement(line: &str) -> bool {
     line.trim_start().starts_with("use.")
 }
 
+fn is_decorator(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.starts_with('@') && !is_comment(trimmed)
+}
+
 fn is_proc_or_export(line: &str) -> bool {
     let trimmed = line.trim();
-    trimmed.starts_with("proc.") || trimmed.starts_with("export.")
+    trimmed.starts_with("proc.")
+        || trimmed.starts_with("export.")
+        || trimmed.starts_with("proc ")
+        || trimmed.starts_with("pub proc ")
 }
 
 fn is_section_separator_comment(line: &str) -> bool {
@@ -179,6 +187,15 @@ pub fn format_code(code: &str) -> String {
         let trimmed_line = line.trim();
 
         if !trimmed_line.is_empty() {
+            if is_decorator(trimmed_line) {
+                // Handle decorators - they should be formatted at the current indentation level
+                formatted_code.push_str(&INDENT.repeat(indentation_level));
+                formatted_code.push_str(trimmed_line);
+                formatted_code.push('\n');
+                last_line_was_empty = false;
+                continue;
+            }
+
             if is_comment(trimmed_line) {
                 last_line_was_stack_comment = is_stack_comment(trimmed_line);
 
@@ -215,7 +232,15 @@ pub fn format_code(code: &str) -> String {
 
             // Remove inline comment for keyword extraction.
             let code_without_comment = trimmed_line.split('#').next().unwrap().trim();
-            let first_word = code_without_comment.split('.').next();
+
+            // Handle new procedure syntax (proc name or pub proc name)
+            let first_word = if code_without_comment.starts_with("pub proc ") {
+                Some("proc")
+            } else if code_without_comment.starts_with("proc ") {
+                Some("proc")
+            } else {
+                code_without_comment.split('.').next()
+            };
 
             // Special handling for stack comment newline
             if last_line_was_stack_comment {
